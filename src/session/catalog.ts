@@ -214,7 +214,7 @@ function normalizeEntry(input: unknown): SessionCatalogEntry | undefined {
   if (
     typeof raw.key !== 'string' ||
     typeof raw.scopeId !== 'string' ||
-    (raw.agentId !== 'claude' && raw.agentId !== 'codex') ||
+    (raw.agentId !== 'claude' && raw.agentId !== 'codex' && raw.agentId !== 'pi') ||
     typeof raw.cwdRealpath !== 'string' ||
     typeof raw.policyFingerprint !== 'string' ||
     (raw.status !== 'active' && raw.status !== 'archived') ||
@@ -248,6 +248,7 @@ function matchesIdentity(entry: SessionCatalogEntry, input: SessionCatalogIdenti
 
 function isValidAgentEntry(entry: SessionCatalogEntry): boolean {
   if (entry.agentId === 'claude') return Boolean(entry.sessionId) && !entry.threadId;
+  if (entry.agentId === 'pi') return true; // pi doesn't use session/thread tracking
   return Boolean(entry.threadId) && !entry.sessionId;
 }
 
@@ -258,6 +259,7 @@ function assertAgentIdentity(input: UpsertSessionCatalogInput): void {
     }
     return;
   }
+  if (input.agentId === 'pi') return; // pi doesn't require session/thread fields
   if (!input.threadId || input.sessionId) {
     throw new Error('Codex catalog entries require threadId and must not include sessionId');
   }

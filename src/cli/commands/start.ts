@@ -4,6 +4,7 @@ import { createInterface } from 'node:readline';
 import pkg from '../../../package.json';
 import { ClaudeAdapter } from '../../agent/claude/adapter';
 import { CodexAdapter } from '../../agent/codex/adapter';
+import { PiAgentAdapter } from '../../agent/pi/adapter';
 import {
   AgentPreflightError,
   formatAgentPreflightDiagnostic,
@@ -374,9 +375,9 @@ async function checkRuntimeAgentAvailability(agent: AgentAdapter): Promise<Agent
   if (ok) return { ok: true };
   const diagnostic = {
     code: 'agent-binary-not-found' as const,
-    agentId: agent.id === 'codex' ? 'codex' as const : 'claude' as const,
+    agentId: agent.id === 'codex' ? 'codex' as const : agent.id === 'pi' ? 'pi' as const : 'claude' as const,
     agentName: agent.displayName,
-    command: agent.id === 'codex' ? 'codex' : 'claude',
+    command: agent.id === 'codex' ? 'codex' : agent.id === 'pi' ? 'pi' : 'claude',
   };
   return {
     ok: false,
@@ -431,6 +432,12 @@ export function createRuntimeAgent(
       ignoreUserConfig: codex.ignoreUserConfig === true,
       ignoreRules: codex.ignoreRules !== false,
       sandbox: profileConfig.sandbox.defaultMode,
+      larkChannel,
+    });
+  }
+  if (profileConfig.agentKind === 'pi') {
+    return new PiAgentAdapter({
+      binary: process.env.LARK_CHANNEL_PI_BIN ?? 'pi',
       larkChannel,
     });
   }
