@@ -1,6 +1,13 @@
 # lark-channel-bridge
 
-A lightweight bot that bridges Feishu / Lark messenger with your local Claude Code or Codex CLI. Run one command, scan a QR code to bind a PersonalAgent app, and talk to your local coding agent from chat.
+> **Fork additions** (vs. upstream [larksuite/lark-channel-bridge](https://github.com/larksuite/lark-channel-bridge)):
+>
+> - **pi (OWL) agent support** — Added a third agent backend alongside Claude Code and Codex CLI. The new `PiAgentAdapter` spawns `pi --mode rpc --no-session` as a subprocess, communicates via the JSON-RPC protocol, and translates pi's streaming events (text, thinking, tool calls, usage) into the bridge's card/markdown reply format.
+> - **New profile kind: `pi`** — `lark-channel-bridge profile create pi --agent pi` creates a pi profile. All existing features (streaming cards, slash commands, access control, workspaces, multi-profile, background service) work with pi out of the box.
+> - **Environment variable `LARK_CHANNEL_PI_BIN`** — Override the pi binary path (defaults to `pi`).
+> - **Updated type system** — `AgentKind`, `AgentCapabilityId`, `LocalAgentId`, and related validation across 15 source files now accept `'pi'` in addition to `'claude'` and `'codex'`.
+
+A lightweight bot that bridges Feishu / Lark messenger with your local Claude Code, Codex CLI, or pi (OWL). Run one command, scan a QR code to bind a PersonalAgent app, and talk to your local coding agent from chat.
 
 [中文 README](./README.zh.md)
 

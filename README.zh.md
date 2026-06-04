@@ -1,6 +1,13 @@
 # lark-channel-bridge
 
-把飞书 / Lark 消息和本地 Claude Code 或 Codex CLI 打通的轻量 bot。用一条命令启动，扫码绑定 PersonalAgent 应用，然后在飞书里和本机编程助手对话，让它读图、处理文件、改代码。
+> **Fork 新增功能**（相对于上游 [larksuite/lark-channel-bridge](https://github.com/larksuite/lark-channel-bridge)）：
+>
+> - **pi (OWL) agent 支持** — 在 Claude Code 和 Codex CLI 之外新增了第三个 agent 后端。新的 `PiAgentAdapter` 以子进程方式启动 `pi --mode rpc --no-session`，通过 JSON-RPC 协议通信，并将 pi 的流式事件（文本、思考、工具调用、用量）转换为 bridge 的卡片/Markdown 回复格式。
+> - **新增 profile 类型：`pi`** — `lark-channel-bridge profile create pi --agent pi` 即可创建 pi profile。所有已有功能（流式卡片、斜杠命令、访问控制、工作区、多 profile、后台服务）均可与 pi 配合使用。
+> - **环境变量 `LARK_CHANNEL_PI_BIN`** — 可自定义 pi 二进制路径（默认为 `pi`）。
+> - **类型系统更新** — `AgentKind`、`AgentCapabilityId`、`LocalAgentId` 及相关校验在 15 个源文件中新增了对 `'pi'` 的支持。
+
+把飞书 / Lark 消息和本地 Claude Code、Codex CLI 或 pi (OWL) 打通的轻量 bot。用一条命令启动，扫码绑定 PersonalAgent 应用，然后在飞书里和本机编程助手对话，让它读图、处理文件、改代码。
 
 [English README](./README.md)
 
