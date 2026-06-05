@@ -995,13 +995,16 @@ async function processAgentStream(
       }
       if (evt.type === 'usage') {
         const { costUsd, inputTokens, outputTokens } = evt;
-        if (costUsd !== undefined || inputTokens !== undefined || outputTokens !== undefined) {
+        // Guard: costUsd may be null/undefined from some agent adapters;
+        // toFixed() requires a finite number.
+        const safeCostUsd = (typeof costUsd === 'number' && Number.isFinite(costUsd)) ? costUsd : undefined;
+        if (safeCostUsd !== undefined || inputTokens !== undefined || outputTokens !== undefined) {
           log.info('agent', 'usage', {
-            ...(costUsd !== undefined ? { costUsd: Number(costUsd.toFixed(4)) } : {}),
+            ...(safeCostUsd !== undefined ? { costUsd: Number(safeCostUsd.toFixed(4)) } : {}),
             ...(inputTokens !== undefined ? { inputTokens } : {}),
             ...(outputTokens !== undefined ? { outputTokens } : {}),
           });
-          if (costUsd !== undefined) reportMetric('cost_usd', costUsd);
+          if (safeCostUsd !== undefined) reportMetric('cost_usd', safeCostUsd);
           if (inputTokens !== undefined) reportMetric('tokens_in', inputTokens);
           if (outputTokens !== undefined) reportMetric('tokens_out', outputTokens);
         }

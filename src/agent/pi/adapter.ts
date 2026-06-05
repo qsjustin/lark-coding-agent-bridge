@@ -339,12 +339,20 @@ function translatePiEvent(
       const message = event.message as Record<string, unknown> | undefined;
       const usage = message?.usage as Record<string, unknown> | undefined;
       if (usage) {
-        return [{
-          type: 'usage',
-          inputTokens: usage.input as number | undefined,
-          outputTokens: usage.output as number | undefined,
-          costUsd: usage.cost as number | undefined,
-        }];
+        // Sanitize usage values: cost may be null/undefined/string from some agents,
+        // but bridge expects a number or undefined (never null).
+        const rawCost = usage.cost;
+        const costUsd = (typeof rawCost === 'number' && Number.isFinite(rawCost)) ? rawCost : undefined;
+        const inputTokens = typeof usage.input === 'number' ? usage.input : undefined;
+        const outputTokens = typeof usage.output === 'number' ? usage.output : undefined;
+        if (costUsd !== undefined || inputTokens !== undefined || outputTokens !== undefined) {
+          return [{
+            type: 'usage',
+            inputTokens,
+            outputTokens,
+            costUsd,
+          }];
+        }
       }
       return [];
     }
