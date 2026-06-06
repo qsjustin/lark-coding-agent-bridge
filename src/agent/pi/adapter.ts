@@ -218,6 +218,8 @@ async function* createEventStream(
 
   // Track tool calls for tool_result correlation
   const toolCallNames = new Map<string, string>();
+  // Track whether any text/thinking content was produced
+  let hasContent = false;
 
   try {
     for await (const line of rl) {
@@ -241,6 +243,7 @@ async function* createEventStream(
       // Translate pi RPC events to bridge AgentEvents
       const events = translatePiEvent(event, toolCallNames);
       for (const evt of events) {
+        if (evt.type === 'text' || evt.type === 'thinking') hasContent = true;
         yield evt;
         // Stop on terminal events
         if (evt.type === 'done' || evt.type === 'error') return;
@@ -274,6 +277,18 @@ async function* createEventStream(
     yield {
       type: 'error',
       message: `pi runtime error: ${runtimeError.message}`,
+      terminationReason: 'failed',
+    };
+  } else if (!hasContent) {
+    // Normal exit but no text/thinking content was ever produced.
+    // This usually means the LLM API failed silently (e.g. auth error,
+    // rate limit, network issue). Surface as an error so the user sees
+    // something actionable instead of a blank "no content" message.
+    const stderr = Buffer.concat(stderrChunks).toString('utf8').trim();
+    const detail = stderr ? ` — ${stderr.slice(0, 300)}` : '';
+    yield {
+      type: 'error',
+      message: `pi agent 未返回内容，可能是 LLM API 报错${detail}`,
       terminationReason: 'failed',
     };
   } else {
