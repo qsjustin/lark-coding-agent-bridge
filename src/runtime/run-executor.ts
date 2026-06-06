@@ -30,6 +30,8 @@ export interface SubmitRunInput {
     source: string;
     stage: string;
   };
+  /** Session directory for pi agent (--session-dir). */
+  sessionDir?: string;
 }
 
 export interface RunExecution {
@@ -104,6 +106,7 @@ export class RunExecutor {
       sandbox: input.policy.sandbox,
       permissionMode: input.policy.permissionMode,
       stopGraceMs: input.stopGraceMs,
+      sessionDir: input.sessionDir,
     };
     let run: AgentRun;
     try {

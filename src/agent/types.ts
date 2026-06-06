@@ -45,6 +45,12 @@ export interface AgentRunOptions {
    * are adapter-specific.
   */
   stopGraceMs?: number;
+  /**
+   * Directory for pi agent session storage. When set, the adapter should
+   * pass --session-dir and --continue to pi so that sessions are persisted
+   * and resumed across runs.
+   */
+  sessionDir?: string;
 }
 
 export interface AgentRun {

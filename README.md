@@ -2,7 +2,9 @@
 
 > **Fork additions** (vs. upstream [larksuite/lark-channel-bridge](https://github.com/larksuite/lark-channel-bridge)):
 >
-> - **pi (OWL) agent support** — Added a third agent backend alongside Claude Code and Codex CLI. The new `PiAgentAdapter` spawns `pi --mode rpc --no-session` as a subprocess, communicates via the JSON-RPC protocol, and translates pi's streaming events (text, thinking, tool calls, usage) into the bridge's card/markdown reply format.
+> - **pi (OWL) agent support** — Added a third agent backend alongside Claude Code and Codex CLI. The new `PiAgentAdapter` spawns `pi --mode rpc` as a subprocess, communicates via the JSON-RPC protocol, and translates pi's streaming events (text, thinking, tool calls, usage) into the bridge's card/markdown reply format.
+> - **Per-scope workspace isolation** — Each Feishu chat (chatId) automatically gets its own workspace directory (`<workspaceRoot>/<scopeId>/`), so different users' pi agent workspaces are isolated. Users can manually set a workspace via `/workspace`, which takes precedence.
+> - **Pi session persistence** — Pi agent session files are stored in `.pi-sessions/` under the per-scope workspace, and can be restored after bridge restart via `--continue` (requires pi version support).
 > - **New profile kind: `pi`** — `lark-channel-bridge profile create pi --agent pi` creates a pi profile. All existing features (streaming cards, slash commands, access control, workspaces, multi-profile, background service) work with pi out of the box.
 > - **Environment variable `LARK_CHANNEL_PI_BIN`** — Override the pi binary path (defaults to `pi`).
 > - **Updated type system** — `AgentKind`, `AgentCapabilityId`, `LocalAgentId`, and related validation across 15 source files now accept `'pi'` in addition to `'claude'` and `'codex'`.

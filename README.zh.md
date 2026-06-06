@@ -2,7 +2,9 @@
 
 > **Fork 新增功能**（相对于上游 [larksuite/lark-channel-bridge](https://github.com/larksuite/lark-channel-bridge)）：
 >
-> - **pi (OWL) agent 支持** — 在 Claude Code 和 Codex CLI 之外新增了第三个 agent 后端。新的 `PiAgentAdapter` 以子进程方式启动 `pi --mode rpc --no-session`，通过 JSON-RPC 协议通信，并将 pi 的流式事件（文本、思考、工具调用、用量）转换为 bridge 的卡片/Markdown 回复格式。
+> - **pi (OWL) agent 支持** — 在 Claude Code 和 Codex CLI 之外新增了第三个 agent 后端。新的 `PiAgentAdapter` 以子进程方式启动 `pi --mode rpc`，通过 JSON-RPC 协议通信，并将 pi 的流式事件（文本、思考、工具调用、用量）转换为 bridge 的卡片/Markdown 回复格式。
+> - **per-scope workspace 隔离** — 每个飞书聊天（chatId）自动拥有独立的工作区目录（`<workspaceRoot>/<scopeId>/`），不同用户的 pi agent 工作区互不干扰。用户可通过 `/workspace` 手动指定工作区，此时优先使用手动指定的路径。
+> - **pi session 持久化** — pi agent 的会话文件保存在 per-scope workspace 下的 `.pi-sessions/` 目录中，bridge 重启后可通过 `--continue` 恢复上下文（需 pi 版本支持）。
 > - **新增 profile 类型：`pi`** — `lark-channel-bridge profile create pi --agent pi` 即可创建 pi profile。所有已有功能（流式卡片、斜杠命令、访问控制、工作区、多 profile、后台服务）均可与 pi 配合使用。
 > - **环境变量 `LARK_CHANNEL_PI_BIN`** — 可自定义 pi 二进制路径（默认为 `pi`）。
 > - **类型系统更新** — `AgentKind`、`AgentCapabilityId`、`LocalAgentId` 及相关校验在 15 个源文件中新增了对 `'pi'` 的支持。

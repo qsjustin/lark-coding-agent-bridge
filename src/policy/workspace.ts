@@ -1,6 +1,7 @@
 import { realpath, stat } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
 import { basename, dirname, resolve } from 'node:path';
+import { log } from '../core/logger';
 
 export type WorkingDirectoryRejectReason =
   | 'empty-requested-cwd'
@@ -35,6 +36,7 @@ export async function resolveWorkingDirectory(
   try {
     resolved = await realpath(trimmed);
   } catch {
+    log.warn('workspace', 'realpath-failed', { requestedCwd, trimmed });
     return reject('path-inaccessible', requestedCwd, `工作目录不存在或不可访问：${requestedCwd}`);
   }
 

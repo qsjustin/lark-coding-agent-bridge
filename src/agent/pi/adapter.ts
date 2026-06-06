@@ -1,4 +1,5 @@
 import { createInterface } from 'node:readline';
+import { mkdirSync } from 'node:fs';
 import type { Readable, Writable } from 'node:stream';
 import { log } from '../../core/logger';
 import { mergeProcessEnv, spawnProcess, type SpawnedProcessByStdio } from '../../platform/spawn';
@@ -67,13 +68,27 @@ export class PiAgentAdapter implements AgentAdapter {
       throw new Error('cwd is required for PiAgentAdapter.run');
     }
 
-    const args = [
-      '--mode', 'rpc',
-      '--no-session',
-      ...this.extraArgs,
-    ];
+    const args = ['--mode', 'rpc'];
+    if (opts.sessionDir) {
+      args.push('--session-dir', opts.sessionDir, '--continue');
+    } else {
+      args.push('--no-session');
+    }
+    args.push(...this.extraArgs);
 
     const envOverrides = buildLarkChannelEnv(this.larkChannel);
+
+    // Ensure session directory exists before spawning pi
+    if (opts.sessionDir) {
+      try {
+        mkdirSync(opts.sessionDir, { recursive: true, mode: 0o700 });
+      } catch (err) {
+        log.warn('agent', 'session-dir-create-failed', {
+          sessionDir: opts.sessionDir,
+          err: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
 
     const child = spawnProcess(this.binary, args, {
       cwd: opts.cwd,

@@ -1,3 +1,6 @@
+import { mkdir, realpath } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+import { log } from '../core/logger';
 import type { AgentCapability } from '../agent/capability';
 import type { AgentEvent } from '../agent/types';
 import type { ProfileConfig } from '../config/profile-schema';
@@ -40,6 +43,13 @@ export interface StartRunFlowInput {
     source: string;
     stage: string;
   };
+  /**
+   * Default workspace directory root (e.g. ~/.lark-channel-workspaces/pi/default).
+   * When neither a per-scope workspace nor a profile-level default is set,
+   * a per-scope subdirectory (<defaultWorkspaceDir>/<scopeId>) is created
+   * automatically so that different users/chats get isolated working directories.
+   */
+  defaultWorkspaceDir?: string;
 }
 
 export type RunFlowRejectCode =
@@ -73,9 +83,67 @@ export interface RecordRunSessionEventInput {
   event: AgentEvent;
 }
 
+/**
+ * Resolve the working directory for a scope.
+ *
+ * Priority:
+ * 1. Per-scope workspace explicitly set via `workspaces.cwdFor(scopeId)`
+ *    (set by the /workspace command)
+ * 2. Auto-generated per-scope directory as a sibling of `defaultWorkspaceDir`
+ *    (parent of defaultWorkspaceDir / <scopeId>). This is the default behavior
+ *    for multi-user isolation: each chat/topic gets its own working directory
+ *    on first use, persisted to the workspace store for subsequent runs.
+ *    e.g. defaultWorkspaceDir=.../pi/default → scopeDir=.../pi/<scopeId>
+ * 3. Profile-level `workspaces.default` as a last-resort fallback
+ *    (set in config.json; shared by all scopes when no per-scope dir exists)
+ */
+async function resolveScopeCwd(input: StartRunFlowInput): Promise<string> {
+  // 1. Check for explicitly set per-scope workspace (/workspace command)
+  const explicitCwd = input.workspaces.cwdFor(input.scopeId);
+  if (explicitCwd) return explicitCwd;
+
+  // 2. Auto-generate per-scope directory if defaultWorkspaceDir is provided
+  if (input.defaultWorkspaceDir) {
+    // Sanitize scopeId for use as directory name (replace ':' with '_')
+    const safeScopeId = input.scopeId.replace(/:/g, '_');
+    // Place per-scope dirs as siblings of the default workspace dir:
+    //   defaultWorkspaceDir = .../pi/default  →  scopeDir = .../pi/<scopeId>
+    const scopeDir = join(dirname(input.defaultWorkspaceDir), safeScopeId);
+    try {
+      await mkdir(scopeDir, { recursive: true, mode: 0o700 });
+      const resolved = await realpath(scopeDir);
+      // Persist so subsequent runs reuse the same directory
+      input.workspaces.setCwd(input.scopeId, resolved);
+      return resolved;
+    } catch (err) {
+      // If auto-creation fails, fall through to profile default
+      log.warn('workspace', 'auto-scope-dir-failed', {
+        scopeId: input.scopeId,
+        scopeDir,
+        err: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
+  // 3. Fallback to profile-level default workspace (shared directory)
+  if (input.profileConfig.workspaces.default) {
+    const defaultDir = input.profileConfig.workspaces.default;
+    try {
+      await mkdir(defaultDir, { recursive: true, mode: 0o700 });
+      return await realpath(defaultDir);
+    } catch (err) {
+      log.warn('workspace', 'default-dir-creation-failed', {
+        defaultDir,
+        err: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
+  return '';
+}
+
 export async function startRunFlow(input: StartRunFlowInput): Promise<StartRunFlowResult> {
-  const requestedCwd =
-    input.workspaces.cwdFor(input.scopeId) ?? input.profileConfig.workspaces.default ?? '';
+  const requestedCwd = await resolveScopeCwd(input);
   const workspace = await resolveWorkingDirectory(requestedCwd);
   if (!workspace.ok) {
     return {
@@ -136,6 +204,12 @@ export async function startRunFlow(input: StartRunFlowInput): Promise<StartRunFl
     }
   }
 
+  // For pi agent: derive session-dir from the resolved cwd so that sessions
+  // are persisted per-scope and survive bridge restarts.
+  const sessionDir = input.capability.agentId === 'pi'
+    ? `${workspace.cwdRealpath}/.pi-sessions`
+    : undefined;
+
   let execution: RunExecution;
   try {
     execution = await input.executor.submit({
@@ -143,6 +217,7 @@ export async function startRunFlow(input: StartRunFlowInput): Promise<StartRunFl
       policy,
       sessionId,
       threadId,
+      sessionDir,
       images:
         input.capability.agentId === 'codex'
           ? policy.attachments
